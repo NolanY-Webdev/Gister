@@ -11,6 +11,12 @@ var oauth2 = new OAuth2(
   'login/oauth/access_token',//access_token path
   null//options
 );
+var request = require('request');
+var bodyParser = require('body-parser');
+
+
+app.use(bodyParser.urlencoded({ extended : true }));
+
 
 
 app.get('/', function(req, res) {
@@ -83,6 +89,41 @@ app.get('/auth/github/callback', function (req, res) {
     }
   );
 })
+
+function getAuthBearerToken(req, res, next) {
+  if (!req.hearers.hasOwnProperty('authorization')) {
+    return res.status(401).json({ error : 401, message : 'Bearer auth token not found in headers' });
+  }
+  var auth_header = req.headers.authorization;
+  var auth_header_value = auth_header.split(' ');
+  if (auth_header_value.length !== 2) {
+    return res.status(401).json({ error: 401, message : 'Authorization header malformation detected'});
+  }
+  req.access_token = auth_header_value[1];
+  next();
+}
+
+//step 3
+app.post('/gists', getAuthBearerToken, function(req,res){
+  var auth_header = req.headers.authorization;
+  var access_token = auth_header.split(' ')[1];
+  console.log(access_token);
+
+  req.post({
+    url : "https://api.github.com/gists",
+    json : true,
+    headers : {
+      Authorization : "Bearer " + req.access_token
+    },
+    body : {
+      description : req.body.description,
+      public : true,
+      files : req.body.files
+    }
+  })
+  res.send('not done yet')
+});
+
 
 app.listen(PORT, function() {
   console.log('API listening on port: ', PORT);
