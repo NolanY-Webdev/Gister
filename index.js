@@ -29,7 +29,7 @@ app.get('/auth/login', function(req, res) {
   var authURL = oauth2.getAuthorizeUrl({
     redirect_uri : 'http://localhost:3000/auth/github/callback',  //github authorization callback url
     scope : ['gist'],       //what you can do on the user's behalf
-    state : 'Authorize'+Math.round(Math.random()*9999999)
+    state : 'Authorize' + Math.round(Math.random()* 9999999 )
   });
   res.json({ url : authURL });  //gives user authorization to login
 });
@@ -64,6 +64,7 @@ app.get('/auth/login', function(req, res) {
 //   );
 // };
 
+//Mike's working code
 app.get('/auth/github/callback', function (req, res) {
   var code = req.query.code;
     if(code === undefined) {
@@ -89,9 +90,10 @@ app.get('/auth/github/callback', function (req, res) {
     }
   );
 })
+//end Mike's working code
 
 function getAuthBearerToken(req, res, next) {
-  if (!req.hearers.hasOwnProperty('authorization')) {
+  if (!req.headers.hasOwnProperty('authorization')) {
     return res.status(401).json({ error : 401, message : 'Bearer auth token not found in headers' });
   }
   var auth_header = req.headers.authorization;
@@ -109,21 +111,39 @@ app.post('/gists', getAuthBearerToken, function(req,res){
   var access_token = auth_header.split(' ')[1];
   console.log(access_token);
 
-  req.post({
+  request.post({
     url : "https://api.github.com/gists",
     json : true,
     headers : {
-      Authorization : "Bearer " + req.access_token
+      authorization : "Bearer " + req.access_token,
+      'User-Agent' : '#Butt INC'
     },
     body : {
       description : req.body.description,
       public : true,
-      files : req.body.files
+      files : JSON.parse(req.body.files)
     }
-  })
-  res.send('not done yet')
+  }, function(err, response, body) {
+    if (err) {
+      return res.status(500).json(err);
+    }
+    res.json(body);
+  });
+
 });
 
+app.get('/gists/:id', getAuthBearerToken, function(req, res) {
+  request.get({
+    url : 'https://api.github.com/gists/' + req.params.id,
+    headers : {
+      authorization : "Bearer " + req.access_token,
+      'User-Agent' : '#Butt INC'
+    }
+  }, function(err, response, body) {
+    if (err) return res.status(500).json(err);
+    res.json(body);
+  });
+});
 
 app.listen(PORT, function() {
   console.log('API listening on port: ', PORT);
